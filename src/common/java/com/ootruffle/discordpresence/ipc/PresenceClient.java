@@ -66,7 +66,13 @@ public final class PresenceClient implements Runnable {
     }
 
     public void configure(String appId, boolean enabled) {
-        this.appId = appId == null ? "" : appId.trim();
+        String id = appId == null ? "" : appId.trim();
+        if (!id.equals(this.appId) || enabled != this.enabled) {
+            // A new id deserves an attempt right away, not after the backoff a failed or
+            // refused (e.g. half-typed) id left behind.
+            nextRetry = 0;
+        }
+        this.appId = id;
         this.enabled = enabled;
     }
 
@@ -103,7 +109,9 @@ public final class PresenceClient implements Runnable {
                 abandon();
             }
             sent = null;
-            setStatus(!enabled ? "disabled" : "no application id set (/rpc appid <id>)");
+            setStatus(!enabled ? "disabled"
+                    : id.isEmpty() ? "no application id set (/rpc appid <id>)"
+                    : "application id must be a number (/rpc appid <id>)");
             return;
         }
 

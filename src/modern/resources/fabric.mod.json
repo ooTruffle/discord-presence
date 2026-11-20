@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description}",
+  "authors": ["ooTruffle"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.ootruffle.discordpresence.DiscordPresenceMod"]
+  },
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "minecraft": "${minecraft_version_range}",
+    "java": ">=${java_version}",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "oneconfig": ">=${oneconfig_version}",
+    "hypixel-mod-api": "*"
+  }
+}

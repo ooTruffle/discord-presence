@@ -33,10 +33,17 @@ public final class HypixelNames {
     public static void load(File cache, String version) {
         Thread t = new Thread(() -> {
             try {
+                boolean cached = false;
                 if (cache.isFile()) {
-                    parse(new String(Files.readAllBytes(cache.toPath()), StandardCharsets.UTF_8));
+                    // A damaged cache must not stop the refresh below, or it would never be replaced.
+                    try {
+                        parse(new String(Files.readAllBytes(cache.toPath()), StandardCharsets.UTF_8));
+                        cached = true;
+                    } catch (Exception e) {
+                        System.err.println("[DiscordPresence] ignoring unreadable " + cache + ": " + e);
+                    }
                 }
-                if (!cache.isFile() || System.currentTimeMillis() - cache.lastModified() > MAX_AGE_MS) {
+                if (!cached || System.currentTimeMillis() - cache.lastModified() > MAX_AGE_MS) {
                     String json = download(version);
                     parse(json);
                     Files.write(cache.toPath(), json.getBytes(StandardCharsets.UTF_8));

@@ -4,13 +4,9 @@ import net.hypixel.data.type.ServerType;
 import net.hypixel.modapi.HypixelModAPI;
 import net.hypixel.modapi.packet.impl.clientbound.event.ClientboundLocationPacket;
 
-/**
- * Location updates pushed by the Hypixel Mod API, used instead of /locraw when that mod is
- * installed. Kept in its own class so nothing loads the API's classes when it is missing.
- */
+/** Uses Hypixel's push location API when present, with /locraw as a fallback. */
 final class HypixelModApiSupport {
-    private HypixelModApiSupport() {
-    }
+    private HypixelModApiSupport() { }
 
     static void init(DiscordPresenceMod mod) {
         HypixelModAPI api = HypixelModAPI.getInstance();

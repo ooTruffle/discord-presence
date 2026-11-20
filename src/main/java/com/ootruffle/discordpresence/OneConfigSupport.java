@@ -7,6 +7,11 @@ import org.polyfrost.oneconfig.api.config.v1.annotations.Slider;
 import org.polyfrost.oneconfig.api.config.v1.annotations.Switch;
 import org.polyfrost.oneconfig.api.config.v1.annotations.Text;
 
+import net.minecraft.client.Minecraft;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -52,6 +57,9 @@ public class OneConfigSupport extends Config {
     @Switch(title = "Singleplayer world name", category = "Privacy")
     public static boolean showWorldName = true;
 
+    @Switch(title = "Show game info", description = "Off: just \"Playing on Hypixel\", without the game, mode, map, team or player count.", category = "Hypixel")
+    public static boolean showGameInfo = true;
+
     @Switch(title = "Hypixel map", category = "Hypixel")
     public static boolean showHypixelMap = true;
 
@@ -74,9 +82,10 @@ public class OneConfigSupport extends Config {
         super("discordpresence.json", "Discord Presence", Category.UTILITY);
         PresenceConfig c = mod.config();
         this.<Boolean>on("enabled", v -> c.enabled = v);
-        this.<String>on("appId", v -> c.appId = v.trim());
-        this.<String>on("largeImage", v -> c.largeImage = v.trim());
-        this.<String>on("largeText", v -> c.largeText = v);
+        // Text boxes report every keystroke; wait until typing stops (see onText).
+        this.<String>onText("appId", v -> c.appId = v.trim());
+        this.<String>onText("largeImage", v -> c.largeImage = v.trim());
+        this.<String>onText("largeText", v -> c.largeText = v);
         this.<Boolean>on("showHead", v -> c.showHead = v);
         this.<Integer>on("smallIcon", v -> {
             if (v >= 0 && v < PresenceConfig.SMALL_ICONS.length) {
@@ -94,6 +103,7 @@ public class OneConfigSupport extends Config {
         this.<Boolean>on("showHypixelMap", v -> c.showHypixelMap = v);
         this.<Boolean>on("showPlayerCount", v -> c.showPlayerCount = v);
         this.<Boolean>on("showBedwarsTeam", v -> c.showBedwarsTeam = v);
+        this.<Boolean>on("showGameInfo", v -> c.showGameInfo = v);
         this.<Float>on("idleMinutes", v -> c.idleMinutes = Math.max(0, v));
     }
 
@@ -119,6 +129,57 @@ public class OneConfigSupport extends Config {
         addCallback(field, cb);
     }
 
+    /** How long a text box must be left alone before its value is used. */
+    private static final long TEXT_DELAY_MS = 1000;
+    /** Text box changes not yet applied, by field; only touched on the client thread. */
+    private static final Map<String, Runnable> pendingText = new LinkedHashMap<>();
+    private static long pendingTextAt;
+    private static Object pendingScreen;
+
+    /**
+     * Like {@link #on}, but for text boxes: applying every keystroke would rewrite the config
+     * file each time and, for the application id, try to connect with every partial number.
+     * The latest value is applied once typing has paused, or as soon as the page is closed.
+     */
+    private <T> void onText(String field, Apply<T> apply) {
+        Predicate<T> cb = v -> {
+            if (v == null) {
+                return false;
+            }
+            pendingText.put(field, () -> apply.apply(v));
+            pendingTextAt = System.currentTimeMillis();
+            pendingScreen = currentScreen(Minecraft.getInstance());
+            return false;
+        };
+        addCallback(field, cb);
+    }
+
+    private static void flushText(Minecraft mc) {
+        if (pendingText.isEmpty()) {
+            return;
+        }
+        if (currentScreen(mc) == pendingScreen && System.currentTimeMillis() - pendingTextAt < TEXT_DELAY_MS) {
+            return;
+        }
+        applying = true;
+        try {
+            pendingText.values().forEach(Runnable::run);
+            pendingText.clear();
+            mod.config().save();
+            mod.applyConfig();
+        } finally {
+            applying = false;
+        }
+    }
+
+    private static Object currentScreen(Minecraft mc) {
+        // Minecraft moved the current screen into Gui in 26.2.
+        //? if >= 26.2 {
+        return mc.gui.screen();
+        //?} else
+        /*return mc.screen;*/
+    }
+
     static void init(DiscordPresenceMod m) {
         mod = m;
         PresenceConfig c = m.config();
@@ -134,6 +195,7 @@ public class OneConfigSupport extends Config {
                 page.save();
             }
         };
+        ClientTickEvents.END_CLIENT_TICK.register(OneConfigSupport::flushText);
     }
 
     private static void pull(PresenceConfig c) {
@@ -150,6 +212,7 @@ public class OneConfigSupport extends Config {
         showHypixelMap = c.showHypixelMap;
         showPlayerCount = c.showPlayerCount;
         showBedwarsTeam = c.showBedwarsTeam;
+        showGameInfo = c.showGameInfo;
         idleMinutes = c.idleMinutes;
     }
 }

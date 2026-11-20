@@ -19,6 +19,8 @@ public final class PresenceConfig {
     public boolean showElapsed = true;
     public boolean showHead = true;
     public boolean showBedwarsTeam = true;
+    /** Off: Hypixel shows only "Playing on Hypixel", with no game, mode, map or team. */
+    public boolean showGameInfo = true;
     /** Minutes without input before the presence switches to "Idle"; 0 turns it off. */
     public float idleMinutes = 5.0f;
     /** An uploaded asset key, an https:// image url, or "head" for the player's head. */
@@ -111,6 +113,7 @@ public final class PresenceConfig {
         showElapsed = bool(p, "showElapsed", showElapsed);
         showHead = bool(p, "showHead", showHead);
         showBedwarsTeam = bool(p, "showBedwarsTeam", showBedwarsTeam);
+        showGameInfo = bool(p, "showGameInfo", showGameInfo);
         try {
             idleMinutes = Math.max(0, Float.parseFloat(p.getProperty("idleMinutes", String.valueOf(idleMinutes)).trim()));
         } catch (NumberFormatException ignored) {
@@ -136,6 +139,7 @@ public final class PresenceConfig {
         p.setProperty("showElapsed", String.valueOf(showElapsed));
         p.setProperty("showHead", String.valueOf(showHead));
         p.setProperty("showBedwarsTeam", String.valueOf(showBedwarsTeam));
+        p.setProperty("showGameInfo", String.valueOf(showGameInfo));
         p.setProperty("idleMinutes", String.valueOf(idleMinutes));
         p.setProperty("largeImage", largeImage);
         p.setProperty("largeText", largeText);
